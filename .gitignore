@@ -1,0 +1,3 @@
+# Large image assets — deploy separately to images/ on the server
+images/*
+!images/.gitkeep
