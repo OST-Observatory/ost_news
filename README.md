@@ -14,7 +14,7 @@ This repository is deployed into the landing page’s `news_articles/` directory
 ├── css/                    # Article and archive styles
 ├── js/                     # Archive page script
 ├── fonts/                  # Web fonts (woff2): Open Sans/Lato (articles), Arimo (archive)
-├── scripts/                # Local helper scripts (not run on server)
+├── scripts/                # Helper scripts: thumbnails (local), deploy (server)
 ├── docs/                   # Examples and deployment notes
 ├── favicon.ico
 └── images/                 # Not in Git — deployed separately (see below)
@@ -50,21 +50,44 @@ Then deploy `images/thumbs/` together with other image assets.
 
 ## Production deployment
 
-1. Deploy the `ost_landing_page` repository to the web root.
-2. Clone or pull this repository into `news_articles/`:
+Deployment runs on the server from a checkout kept **outside** the web root. Do not clone
+this repository into the web root — that publishes `.git/` over HTTP.
 
-   ```bash
-   cd /path/to/web/root
-   git clone <ost_news-repo-url> news_articles
-   # or, to update:
-   git -C news_articles pull
-   ```
+```bash
+cd /mnt/data/src/ost_news
+./scripts/deploy.sh            # dry run — always read this first
+./scripts/deploy.sh --apply
+```
 
-3. Sync `images/` and `images/thumbs/` to `news_articles/images/` on the server.
+The script builds the payload with `git archive` (committed files only), drops `README.md`,
+`TODO.md`, `LICENSE`, `docs/`, `scripts/` and `article_template.html`, validates
+`articles.json`, and syncs the result into `news_articles/` in the landing page web root.
+`images/` is excluded and therefore never deleted by the sync.
+
+Images are still synced separately:
+
+```bash
+rsync -av images/ <server>:/mnt/data/www/news_articles/images/
+```
 
 The landing page loads `news_articles/articles.json` for the home-page news banner and links to `news_articles/index.html` for the full archive.
 
-See [docs/deploy-cache.md](docs/deploy-cache.md) for recommended HTTP cache headers.
+See [docs/deploy-cache.md](docs/deploy-cache.md) for recommended HTTP cache headers, and
+[ost_landing_page/docs/deployment.md](../ost_landing_page/docs/deployment.md) for the full
+deployment description.
+
+## Writing articles: Content-Security-Policy
+
+Articles are served under a strict Content-Security-Policy. The following will **not render**
+and must be avoided:
+
+- inline `<script>` blocks and `on*=` event attributes
+- inline `<style>` blocks and `style="..."` attributes — put rules in `css/article.css`
+- images, fonts, scripts or stylesheets loaded from another host
+- embedded third-party content (`<iframe>`, YouTube/Vimeo players)
+
+Host videos as files under `images/` and embed them with `<video>` instead. Plain links to
+external sites are unaffected.
 
 ## Adding an article
 
